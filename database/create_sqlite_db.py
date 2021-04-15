@@ -222,7 +222,7 @@ if __name__ == "__main__":
         db.create_table(
             "Ratings",
             "site TEXT NOT NULL",
-            "comment TEXT NOT NULL",
+            "comment TEXT UNIQUE NOT NULL",
             "rating FLOAT NOT NULL",
         )
 
@@ -241,6 +241,7 @@ if __name__ == "__main__":
     with DimnaDatabase(db_path, logger) as db:
 
         db.insert_rating(site, "it is a very bad product", "0")
+        db.insert_rating(site, "it is a very bad product", "2.5")
         db.insert_rating(site, "it really enjoyed it!", "5")
 
         records = db.ratings()
@@ -260,7 +261,7 @@ if __name__ == "__main__":
 
         records = db.pages_url(site)
         print(f"Total number of pages url are:  {len(records)}")
-        for row in records:
+        for row in records[:5]:
             print("site: ", row[0])
             print("page_url: ", row[1])
             print("is_visited", bool(row[2]))
@@ -275,7 +276,7 @@ if __name__ == "__main__":
 
         records = db.pages_url(site)
         print(f"Total number of pages url are:  {len(records)}")
-        for row in records:
+        for row in records[:5]:
             print("site: ", row[0])
             print("page_url: ", row[1])
             print("is_visited", bool(row[2]))
