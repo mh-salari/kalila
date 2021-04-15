@@ -97,7 +97,7 @@ class DimnaDatabase:
             self.commit()
             print(f"All records from {{{table_name}}} deleted!")
         except sqlite3.Error as error:
-            print(f"Failed to create {{{table_name}}}: {error}")
+            print(f"Failed to delete {{{table_name}}}: {error}")
 
     def insert_rating(self, site: str, comment: str, rating: float):
         try:
