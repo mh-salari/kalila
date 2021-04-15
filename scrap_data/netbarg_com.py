@@ -53,7 +53,7 @@ def find_all_offers():
         for category in categories:
             urls.append(f"{base_url}/{city}/{category}")
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=32) as executor:
         future_to_url = {}
         futures = []
         for url in urls:
@@ -119,8 +119,8 @@ def scrap_rattings(url):
 
 
 def scrap_all_rattings(pages_url):
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
+    visited_urls = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=32) as executor:
         future_to_url = {}
         futures = []
         for _, url, is_visited in pages_url:
@@ -139,19 +139,22 @@ def scrap_all_rattings(pages_url):
             except Exception as exc:
                 tqdm.write(f"{url} generated an exception: {exc}")
             else:
-                with DimnaDatabase(db_path, logger) as db:
-                    db.update_page_visit_status(
-                        base_url, url, True,
-                    )
+                if url not in visited_urls:
 
-                    for comment, rate in ratings:
-                        # Regex replace multiple punctuations and normalize
-                        comment = re.sub(
-                            r"[،؟\?\.\!]+(?=[،؟\?\.\!])", "", normalizer(comment)
+                    with DimnaDatabase(db_path, logger) as db:
+                        db.update_page_visit_status(
+                            base_url, url, True,
                         )
-                        db.insert_rating(
-                            base_url, comment, rate,
-                        )
+
+                        for comment, rate in ratings:
+                            # Regex replace multiple punctuations and normalize
+                            comment = re.sub(
+                                r"[،؟\?\.\!]+(?=[،؟\?\.\!])", "", normalizer(comment)
+                            )
+                            db.insert_rating(
+                                base_url, comment, rate,
+                            )
+                    visited_urls.append(url)
 
 
 if __name__ == "__main__":
