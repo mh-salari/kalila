@@ -14,6 +14,7 @@ Created on Apr 11 2021
 import sqlite3
 import os
 from datetime import datetime
+import logging as logger
 
 
 class DimnaDatabase:
@@ -26,9 +27,10 @@ class DimnaDatabase:
         else:
             return cls.instance
 
-    def __init__(self, db_path="you-db-path.db"):
+    def __init__(self, db_path="you-db-path.db", logger=None):
         self.connection = self.connect(db_path)
         self.cursor = self.connection.cursor()
+        self.logger = logger
 
     def __enter__(self):
         return self
@@ -37,13 +39,20 @@ class DimnaDatabase:
         self.cursor.close()
         self.connection.close()
 
+    def log(self, state, text):
+        if self.logger:
+            if state == "error":
+                self.logger.error(text)
+            elif state == "info":
+                self.logger.info(text)
+
     def connect(self, db_path):
         db_name = os.path.basename(db_path)
         try:
             connection = sqlite3.connect(db_path)
-            # print(f"Successfully connected to {db_name}")
+            # self.log("info", f"Successfully connected to {db_name}")
         except sqlite3.Error as error:
-            print(f"Failed to connect to {db_name}: {error}")
+            self.log("error", f"Failed to connect to {db_name}: {error}")
         return connection
 
     def commit(self):
@@ -73,40 +82,40 @@ class DimnaDatabase:
             if self.fetchone()[0] == 1:
                 table_exist = True
         except sqlite3.Error as error:
-            print(f"Failed to check table exist {error}")
+            self.log("error", f"Failed to check table exist {error}")
         return table_exist
 
     def create_table(self, table_name, *columns):
         table_exist = self.check_if_table_exist(table_name)
         if table_exist:
-            print(f"Table {{{table_name}}} already exists")
+            self.log("info", f"Table {{{table_name}}} already exists")
         else:
             columns_text = ", ".join(columns)
             create_table_query = f""" CREATE TABLE {table_name} ({columns_text})"""
             try:
                 self.execute(create_table_query)
                 self.commit()
-                print(f"Table {{{table_name}}} created successfully")
+                self.log("info", f"Table {{{table_name}}} created successfully")
             except sqlite3.Error as error:
-                print(f"Failed to create {{{table_name}}}: {error}")
+                self.log("error", f"Failed to create {{{table_name}}}: {error}")
 
     def delete_all_records(self, table_name):
         try:
             sql_create_table_query = f""" DELETE FROM {table_name};"""
             self.execute(sql_create_table_query)
             self.commit()
-            print(f"All records from {{{table_name}}} deleted!")
+            self.log("info", f"All records from {{{table_name}}} deleted!")
         except sqlite3.Error as error:
-            print(f"Failed to delete {{{table_name}}}: {error}")
+            self.log("error", f"Failed to delete {{{table_name}}}: {error}")
 
     def insert_rating(self, site: str, comment: str, rating: float):
         try:
             insert_query = f"""INSERT INTO Ratings (site, comment, rating) VALUES ('{site}', '{comment}', {rating})"""
             self.execute(insert_query)
             self.commit()
-            print(f"Record inserted successfully into {{Ratings}}")
+            self.log("info", f"Record inserted successfully into {{Ratings}}")
         except sqlite3.Error as error:
-            print(f"Failed to insert data into {{Ratings}}: {error}")
+            self.log("error", f"Failed to insert data into {{Ratings}}: {error}")
 
     def ratings(self, site=""):
 
@@ -119,7 +128,7 @@ class DimnaDatabase:
             records = self.fetchall()
             return records
         except sqlite3.Error as error:
-            print(f"Failed to read data from {{Ratings}}: {error}")
+            self.log("error", f"Failed to read data from {{Ratings}}: {error}")
 
     def last_scrap_time(self, site: str):
         select_query = (
@@ -132,7 +141,7 @@ class DimnaDatabase:
             if records:
                 last_scrap_time = datetime.strptime(records[0][0], "%Y-%m-%d %H:%M:%S")
         except sqlite3.Error as error:
-            print(f"Failed to read data from {{LastScrapTime}}: {error}")
+            self.log("error", f"Failed to read data from {{LastScrapTime}}: {error}")
         return last_scrap_time
 
     def insert_last_scrap_time(self, site: str, time):
@@ -146,10 +155,10 @@ class DimnaDatabase:
         try:
             self.execute(query)
             self.commit()
-            print("Record Updated successfully in {LastScrapTime}")
+            self.log("info", "Record Updated successfully in {LastScrapTime}")
 
         except sqlite3.Error as error:
-            print(f"Failed to update data in {{LastScrapTime}}: {error}")
+            self.log("error", f"Failed to update data in {{LastScrapTime}}: {error}")
 
     def pages_url(self, site=""):
 
@@ -162,7 +171,7 @@ class DimnaDatabase:
             records = self.fetchall()
             return records
         except sqlite3.Error as error:
-            print(f"Failed to read data from {{Pages}}: {error}")
+            self.log("error", f"Failed to read data from {{Pages}}: {error}")
 
     def insert_pages_url(self, site, page_url, is_visited):
 
@@ -170,10 +179,10 @@ class DimnaDatabase:
             insert_query = f"""INSERT INTO Pages (site, page_url, is_visited) VALUES ('{site}', '{page_url}', {is_visited})"""
             self.execute(insert_query)
             self.commit()
-            print("Record inserted successfully into Pages ")
+            self.log("info", "Record inserted successfully into Pages ")
 
         except sqlite3.Error as error:
-            print(f"Failed to insert data into {{Pages}}: {error}")
+            self.log("error", f"Failed to insert data into {{Pages}}: {error}")
 
     def update_page_visit_status(self, site, page_url, is_visited):
         if_exist_query = f"""SELECT page_url from Pages WHERE site='{site}' AND page_url='{page_url}'"""
@@ -183,25 +192,32 @@ class DimnaDatabase:
             if not self.fetchone():
                 raise Exception(f"Record not found! page_url:{page_url}")
         except sqlite3.Error as error:
-            print(f"Failed to read data from {{Pages}}: {error}")
+            self.log("error", f"Failed to read data from {{Pages}}: {error}")
 
         update_query = f"""UPDATE Pages SET page_url='{page_url}', is_visited={is_visited} WHERE site='{site}' AND page_url='{page_url}'"""
         try:
             self.execute(update_query)
             self.commit()
-            print(f"Record Updated successfully in {{Pages}}")
+            self.log("info", f"Record Updated successfully in {{Pages}}")
 
         except sqlite3.Error as error:
-            print(f"Failed to update data in {{Pages}}: {error}")
+            self.log("error", f"Failed to update data in {{Pages}}: {error}")
 
 
 if __name__ == "__main__":
     db_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "dimna.db")
 
+    # Config logger
+    logger.basicConfig(
+        level=logger.INFO,
+        handlers=[logger.StreamHandler()],
+        format="%(asctime)s %(levelname)s %(message)s",
+    )
+
     site = "https://www.digikala.com"
 
     # create Database tabels
-    with DimnaDatabase(db_path) as db:
+    with DimnaDatabase(db_path, logger) as db:
 
         db.create_table(
             "Ratings",
@@ -222,7 +238,7 @@ if __name__ == "__main__":
         )
 
     # Insert demo data to database
-    with DimnaDatabase(db_path) as db:
+    with DimnaDatabase(db_path, logger) as db:
 
         db.insert_rating(site, "it is a very bad product", "0")
         db.insert_rating(site, "it really enjoyed it!", "5")
@@ -266,7 +282,7 @@ if __name__ == "__main__":
             print("-" * 25)
 
     # delete all demo data
-    with DimnaDatabase(db_path) as db:
-        db.delete_all_records("Ratings")
-        db.delete_all_records("LastScrapTime")
-        db.delete_all_records("Pages")
+    # with DimnaDatabase(db_path, logger) as db:
+    #     db.delete_all_records("Ratings")
+    #     db.delete_all_records("LastScrapTime")
+    #     db.delete_all_records("Pages")
