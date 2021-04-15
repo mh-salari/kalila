@@ -16,6 +16,7 @@ import sys
 import os
 import logging as logger
 
+from normalizer import normalizer
 
 # add database class path
 database_dir_path = os.path.join(
@@ -142,11 +143,13 @@ def scrap_all_rattings(pages_url):
                         base_url, url, True,
                     )
 
-                    for rating in ratings:
+                    for comment, rate in ratings:
+                        # Regex replace multiple punctuations and normalize
+                        comment = re.sub(
+                            r"[،؟\?\.\!]+(?=[،؟\?\.\!])", "", normalizer(comment)
+                        )
                         db.insert_rating(
-                            base_url,
-                            rating[0].replace("'", "").replace('"', ""),
-                            rating[1],
+                            base_url, comment, rate,
                         )
 
 
