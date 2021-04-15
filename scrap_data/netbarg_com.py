@@ -12,9 +12,11 @@ import re
 from datetime import datetime, timedelta
 from tqdm import tqdm
 import concurrent.futures
+import threading
 import sys
 import os
 import logging as logger
+import random
 
 from normalizer import normalizer
 from netbarg_com_data import categories, cities
@@ -26,6 +28,8 @@ database_dir_path = os.path.join(
 
 sys.path.insert(0, database_dir_path)
 from create_sqlite_db import DimnaDatabase
+
+visited_ratings_url = list()
 
 
 def find_offers(url):
@@ -94,6 +98,8 @@ def pars_ratings(soup):
 
 
 def scrap_rattings(url):
+    global visited_ratings_url
+    lock = threading.Lock()
     r = requests.get(url, timeout=30)
 
     if r.status_code != 200:
@@ -104,6 +110,10 @@ def scrap_rattings(url):
         ratings += pars_ratings(BeautifulSoup(r.text, "html.parser"))
     if "getMoreRatings" in r.text:
         _url = re.findall(r'mj-target="/rating/ratings/getMoreRatings/(.*)"', r.text)[0]
+        if _url in visited_ratings_url:
+            return ratings
+        with lock:
+            visited_ratings_url.append(_url)
         ratings_url = base_url + "/rating/ratings/getMoreRatings/" + _url[:-1]
         page_num = 0
         while True:
@@ -120,6 +130,10 @@ def scrap_rattings(url):
 
 def scrap_all_rattings(pages_url):
     visited_urls = []
+
+    pages_url = [list(row) for row in pages_url]
+    random.shuffle(pages_url)
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=32) as executor:
         future_to_url = {}
         futures = []
@@ -189,7 +203,6 @@ if __name__ == "__main__":
                 pages_url = db.pages_url(base_url)
     else:
         SEARCH_FOR_NEW_URLS = True
-
     if SEARCH_FOR_NEW_URLS:
         print(f"Finding all offers on {base_url}🦦...")
         find_all_offers()
