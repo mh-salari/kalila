@@ -17,6 +17,7 @@ import os
 import logging as logger
 
 from normalizer import normalizer
+from netbarg_com_data import categories, cities
 
 # add database class path
 database_dir_path = os.path.join(
@@ -168,53 +169,6 @@ if __name__ == "__main__":
         handlers=[logger.FileHandler(logfile_path)],
         format="%(asctime)s %(levelname)s %(message)s",
     )
-
-    cities = [
-        "tehran",
-        "isfahan",
-        "karaj",
-        "mashhad",
-        "ghazvin",
-        "arak",
-        "ardebil",
-        "oroomieh",
-        "ahwaz",
-        "ilam",
-        "bojnoord",
-        "booshehr",
-        "bandarabbas",
-        "birjand",
-        "tabriz",
-        "khoramabad",
-        "rasht",
-        "zahedan",
-        "zanjan",
-        "semnan",
-        "sanandaj",
-        "shahrekord",
-        "shiraz",
-        "qom",
-        "kerman",
-        "kermanshah",
-        "kish",
-        "gorgan",
-        "mazandaran",
-        "hamedan",
-        "yasooj",
-        "yazd",
-    ]
-
-    categories = [
-        "c:restaurant",
-        "c:entertainment",
-        "c:health",
-        "c:art",
-        "c:education",
-        "c:beauty",
-        "c:product",
-        "c:traveltours",
-        "c:services",
-    ]
 
     SEARCH_FOR_NEW_URLS = False
 
