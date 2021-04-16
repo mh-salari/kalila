@@ -134,7 +134,7 @@ def scrap_all_rattings(pages_url):
     pages_url = [list(row) for row in pages_url]
     random.shuffle(pages_url)
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=32) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
         future_to_url = {}
         futures = []
         for _, url, is_visited in pages_url:
@@ -179,7 +179,10 @@ if __name__ == "__main__":
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
     # Config logger
-    logfile_path = os.path.join(dir_path, "log.log")
+    logfile_path = os.path.join(dir_path, "logs", "netbard_com.log")
+    if not os.path.exists(os.path.dirname(logfile_path)):
+        os.mkdir(os.path.dirname(logfile_path))
+
     logger.basicConfig(
         level=logger.INFO,
         # handlers=[logger.FileHandler(logfile_path), logger.StreamHandler()],
