@@ -4,6 +4,7 @@
 Created on Apr 5 2021
 @author: MohammadHossein Salari
 @email: mohammad.hossein.salari@gmail.com
+@sources: - https://alexwlchan.net/2019/10/adventures-with-concurrent-futures/
 """
 
 import requests
@@ -18,6 +19,7 @@ import os
 import logging as logger
 import random
 import math
+import itertools
 
 from normalizer import normalizer
 
@@ -63,38 +65,53 @@ def find_number_of_comments(comment_url):
     return num_pages
 
 
-def find_all_comments_pages(pages_url):
+def find_all_comments_pages(pages_url, max_workers=128):
+    book_url_to_do = [
+        book_url for (_, book_url, is_visited) in pages_url if not is_visited
+    ]
+    book_url_to_do_iterator = iter(book_url_to_do)
+    pbar = tqdm(initial=len(pages_url) - len(book_url_to_do), total=len(pages_url))
     comments_url = list()
-    with concurrent.futures.ThreadPoolExecutor(max_workers=32) as executor:
-        future_to_url = {}
-        futures = list()
-        for _, book_url, is_visited in pages_url:
-            if not is_visited:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {}
+        for book_url in itertools.islice(book_url_to_do_iterator, max_workers):
+            book_id, book_name = book_url.split("/")[-2:]
+            first_comment_url = f"{comments_base_url}/{book_id}/{book_name}.json"
+            futures_executor = executor.submit(
+                find_number_of_comments, comment_url=first_comment_url
+            )
+            futures.update({futures_executor: book_url})
+        while futures:
+            done, _ = concurrent.futures.wait(
+                futures, return_when=concurrent.futures.FIRST_COMPLETED
+            )
+            for future in done:
+                pbar.update(1)
+                book_url = futures[future]
+                futures.pop(future)
+                book_id, book_name = book_url.split("/")[-2:]
+                try:
+                    num_pages = future.result()
+                except Exception as exc:
+                    tqdm.write(f"{book_url} generated an exception: {exc}")
+                else:
+                    if num_pages:
+                        for page in range(1, num_pages + 1):
+                            comment_url = f"{comments_base_url}/{book_id}/{book_name}.json?p={page}"
+                            comments_url.append([book_url, comment_url])
+                    else:
+                        with DimnaDatabase(db_path, logger) as db:
+                            db.update_page_visit_status(
+                                base_url, book_url, True,
+                            )
+            for book_url in itertools.islice(book_url_to_do_iterator, len(done)):
                 book_id, book_name = book_url.split("/")[-2:]
                 first_comment_url = f"{comments_base_url}/{book_id}/{book_name}.json"
                 futures_executor = executor.submit(
                     find_number_of_comments, comment_url=first_comment_url
                 )
-                future_to_url.update({futures_executor: book_url})
-                futures.append(futures_executor)
-        for future in tqdm(
-            concurrent.futures.as_completed(futures),
-            initial=len(pages_url) - len(futures),
-            total=len(pages_url),
-        ):
-            book_url = future_to_url[future]
-            book_id, book_name = book_url.split("/")[-2:]
-            try:
-                num_pages = future.result()
-            except Exception as exc:
-                tqdm.write(f"{book_url} generated an exception: {exc}")
-            else:
-                if num_pages:
-                    for page in range(1, num_pages + 1):
-                        comment_url = (
-                            f"{comments_base_url}/{book_id}/{book_name}.json?p={page}"
-                        )
-                        comments_url.append([book_url, comment_url])
+                futures.update({futures_executor: book_url})
+    pbar.close()
     return comments_url
 
 
@@ -113,32 +130,44 @@ def scrap_comments(comment_url):
     return ratings
 
 
-def scrap_all_comments(comments_url):
+def scrap_all_comments(comments_url, max_workers=128):
+    comments_url_iterator = iter(comments_url)
+    pbar = tqdm(total=len(comments_url))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=128) as executor:
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=32) as executor:
-        future_to_url = {}
-        futures = []
-        for book_url, comment_url in comments_url:
-            futures_executor = executor.submit(scrap_comments, comment_url=comment_url)
-            future_to_url.update({futures_executor: book_url})
-            futures.append(futures_executor)
-        for future in tqdm(
-            concurrent.futures.as_completed(futures),
-            initial=len(comments_url) - len(futures),
-            total=len(comments_url),
+        futures = {}
+        for book_url, comment_url in itertools.islice(
+            comments_url_iterator, max_workers
         ):
-            book_url = future_to_url[future]
-            try:
-                ratings = future.result()
-            except Exception as exc:
-                tqdm.write(f"{book_url} generated an exception: {exc}")
-            else:
-                with DimnaDatabase(db_path, logger) as db:
-                    db.update_page_visit_status(
-                        base_url, book_url, True,
-                    )
-                    for comment, rate in ratings:
-                        db.insert_rating(base_url, comment, rate)
+            futures_executor = executor.submit(scrap_comments, comment_url=comment_url)
+            futures.update({futures_executor: book_url})
+        while futures:
+            done, _ = concurrent.futures.wait(
+                futures, return_when=concurrent.futures.FIRST_COMPLETED
+            )
+            for future in done:
+                pbar.update(1)
+                book_url = futures[future]
+                futures.pop(future)
+                try:
+                    ratings = future.result()
+                except Exception as exc:
+                    tqdm.write(f"{book_url} generated an exception: {exc}")
+                else:
+                    with DimnaDatabase(db_path, logger) as db:
+                        db.update_page_visit_status(
+                            base_url, book_url, True,
+                        )
+                        for comment, rate in ratings:
+                            db.insert_rating(base_url, comment, rate)
+            for book_url, comment_url in itertools.islice(
+                comments_url_iterator, len(done)
+            ):
+                futures_executor = executor.submit(
+                    scrap_comments, comment_url=comment_url
+                )
+                futures.update({futures_executor: book_url})
+    pbar.close()
 
 
 if __name__ == "__main__":
