@@ -113,9 +113,15 @@ class DimnaDatabase:
             insert_query = f"""INSERT INTO Ratings (site, comment, rating) VALUES ('{site}', '{comment}', {rating})"""
             self.execute(insert_query)
             self.commit()
-            self.log("info", f"Record inserted successfully into {{Ratings}}")
+            self.log(
+                "info",
+                f"{{comment='{comment}'}} inserted successfully into {{Ratings}}",
+            )
         except sqlite3.Error as error:
-            self.log("error", f"Failed to insert data into {{Ratings}}: {error}")
+            self.log(
+                "error",
+                f"Failed to insert {{comment='{comment}'}} into {{Ratings}}: {error}",
+            )
 
     def ratings(self, site=""):
 
@@ -128,7 +134,9 @@ class DimnaDatabase:
             records = self.fetchall()
             return records
         except sqlite3.Error as error:
-            self.log("error", f"Failed to read data from {{Ratings}}: {error}")
+            self.log(
+                "error", f"Failed to read {{site='{site}'}} from {{Ratings}}: {error}"
+            )
 
     def last_scrap_time(self, site: str):
         select_query = (
@@ -141,7 +149,10 @@ class DimnaDatabase:
             if records:
                 last_scrap_time = datetime.strptime(records[0][0], "%Y-%m-%d %H:%M:%S")
         except sqlite3.Error as error:
-            self.log("error", f"Failed to read data from {{LastScrapTime}}: {error}")
+            self.log(
+                "error",
+                f"Failed to read {{site='{site}'}} from {{LastScrapTime}}: {error}",
+            )
         return last_scrap_time
 
     def insert_last_scrap_time(self, site: str, time):
@@ -155,10 +166,16 @@ class DimnaDatabase:
         try:
             self.execute(query)
             self.commit()
-            self.log("info", "Record Updated successfully in {LastScrapTime}")
+            self.log(
+                "info",
+                f"Record {{time='{time}'}} Updated successfully in {{LastScrapTime}}",
+            )
 
         except sqlite3.Error as error:
-            self.log("error", f"Failed to update data in {{LastScrapTime}}: {error}")
+            self.log(
+                "error",
+                f"Failed to update {{site='{site}'}} in {{LastScrapTime}}: {error}",
+            )
 
     def pages_url(self, site=""):
 
@@ -171,7 +188,9 @@ class DimnaDatabase:
             records = self.fetchall()
             return records
         except sqlite3.Error as error:
-            self.log("error", f"Failed to read data from {{Pages}}: {error}")
+            self.log(
+                "error", f"Failed to read {{site='{site}'}} from {{Pages}}: {error}"
+            )
 
     def insert_pages_url(self, site, page_url, is_visited):
 
@@ -179,10 +198,16 @@ class DimnaDatabase:
             insert_query = f"""INSERT INTO Pages (site, page_url, is_visited) VALUES ('{site}', '{page_url}', {is_visited})"""
             self.execute(insert_query)
             self.commit()
-            self.log("info", "Record inserted successfully into Pages ")
+            self.log(
+                "info",
+                f"Record {{page_url='{page_url}'}} inserted successfully into Pages",
+            )
 
         except sqlite3.Error as error:
-            self.log("error", f"Failed to insert data into {{Pages}}: {error}")
+            self.log(
+                "error",
+                f"Failed to insert {{page_url='{page_url}'}} into {{Pages}}: {error}",
+            )
 
     def update_page_visit_status(self, site, page_url, is_visited):
         if_exist_query = f"""SELECT page_url from Pages WHERE site='{site}' AND page_url='{page_url}'"""
@@ -192,16 +217,25 @@ class DimnaDatabase:
             if not self.fetchone():
                 raise Exception(f"Record not found! page_url:{page_url}")
         except sqlite3.Error as error:
-            self.log("error", f"Failed to read data from {{Pages}}: {error}")
+            self.log(
+                "error",
+                f"Failed to read {{page_url='{page_url}'}} from {{Pages}}: {error}",
+            )
 
         update_query = f"""UPDATE Pages SET page_url='{page_url}', is_visited={is_visited} WHERE site='{site}' AND page_url='{page_url}'"""
         try:
             self.execute(update_query)
             self.commit()
-            self.log("info", f"Record Updated successfully in {{Pages}}")
+            self.log(
+                "info",
+                f"Record {{page_url='{page_url}'}} Updated successfully in {{Pages}}",
+            )
 
         except sqlite3.Error as error:
-            self.log("error", f"Failed to update data in {{Pages}}: {error}")
+            self.log(
+                "error",
+                f"Failed to update {{page_url='{page_url}'}} in {{Pages}}: {error}",
+            )
 
 
 if __name__ == "__main__":
@@ -237,52 +271,52 @@ if __name__ == "__main__":
             "is_visited BOOLEAN NOT NULL",
         )
 
-    # Insert demo data to database
-    with DimnaDatabase(db_path, logger) as db:
+    # # Insert demo data to database
+    # with DimnaDatabase(db_path, logger) as db:
 
-        db.insert_rating(site, "it is a very bad product", "0")
-        db.insert_rating(site, "it is a very bad product", "2.5")
-        db.insert_rating(site, "it really enjoyed it!", "5")
+    #     db.insert_rating(site, "it is a very bad product", "0")
+    #     db.insert_rating(site, "it is a very bad product", "2.5")
+    #     db.insert_rating(site, "it really enjoyed it!", "5")
 
-        records = db.ratings()
-        print("Total number of ratings are:  ", len(records))
-        for row in records:
-            print("site: ", row[0])
-            print("comment: ", row[1])
-            print("rating: ", row[2])
-            print("-" * 25)
+    #     records = db.ratings()
+    #     print("Total number of ratings are:  ", len(records))
+    #     for row in records:
+    #         print("site: ", row[0])
+    #         print("comment: ", row[1])
+    #         print("rating: ", row[2])
+    #         print("-" * 25)
 
-        db.insert_last_scrap_time(site, datetime.now())
-        saved_time = db.last_scrap_time(site)
-        print("Last time we visited {site} was: {saved_time}")
+    #     db.insert_last_scrap_time(site, datetime.now())
+    #     saved_time = db.last_scrap_time(site)
+    #     print(f"Last time we visited {site} was: {saved_time}")
 
-        db.insert_pages_url(site, f"{site}/p1", False)
-        db.insert_pages_url(site, f"{site}/p1", True)
+    #     db.insert_pages_url(site, f"{site}/p1", False)
+    #     db.insert_pages_url(site, f"{site}/p1", True)
 
-        records = db.pages_url(site)
-        print(f"Total number of pages url are:  {len(records)}")
-        for row in records[:5]:
-            print("site: ", row[0])
-            print("page_url: ", row[1])
-            print("is_visited", bool(row[2]))
-            print("-" * 25)
+    #     records = db.pages_url(site)
+    #     print(f"Total number of pages url are:  {len(records)}")
+    #     for row in records[:5]:
+    #         print("site: ", row[0])
+    #         print("page_url: ", row[1])
+    #         print("is_visited", bool(row[2]))
+    #         print("-" * 25)
 
-        db.update_page_visit_status(
-            site, f"{site}/p1", True,
-        )
-        # db.update_page_visit_status(
-        #     site, f"{site}/p2", True,
-        # )
+    #     db.update_page_visit_status(
+    #         site, f"{site}/p1", True,
+    #     )
+    #     # db.update_page_visit_status(
+    #     #     site, f"{site}/p2", True,
+    #     # )
 
-        records = db.pages_url(site)
-        print(f"Total number of pages url are:  {len(records)}")
-        for row in records[:5]:
-            print("site: ", row[0])
-            print("page_url: ", row[1])
-            print("is_visited", bool(row[2]))
-            print("-" * 25)
+    #     records = db.pages_url(site)
+    #     print(f"Total number of pages url are:  {len(records)}")
+    #     for row in records[:5]:
+    #         print("site: ", row[0])
+    #         print("page_url: ", row[1])
+    #         print("is_visited", bool(row[2]))
+    #         print("-" * 25)
 
-    # delete all demo data
+    # # delete all demo data
     # with DimnaDatabase(db_path, logger) as db:
     #     db.delete_all_records("Ratings")
     #     db.delete_all_records("LastScrapTime")
