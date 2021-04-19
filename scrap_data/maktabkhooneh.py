@@ -139,5 +139,5 @@ if __name__ == "__main__":
                     base_url, course_url, True,
                 )
 
-            for comment, rate in scrap_comments(course_url):
-                db.insert_rating(base_url, comment, rate)
+                for comment, rate in scrap_comments(course_url):
+                    db.insert_rating(base_url, comment, rate)
