@@ -74,7 +74,6 @@ def get_page_comments(url, page_number):
     comments_url = (
         f"https://snappfood.ir/restaurant/comment/vendor/{restaurant_id}/{page_number}"
     )
-
     r = requests.get(comments_url)
     if r.status_code != 200:
         raise Exception(f"Request Error: {r.status_code}")
@@ -124,11 +123,6 @@ def get_all_comments(restaurants_url, pages_tracker={}, max_workers=64):
                         pages_tracker[restaurant_url][1]
                         >= pages_tracker[restaurant_url][0]
                     ):
-                        print(
-                            restaurant_url,
-                            pages_tracker[restaurant_url][1],
-                            pages_tracker[restaurant_url][0],
-                        )
                         with DimnaDatabase(db_path, logger) as db:
                             db.update_page_visit_status(
                                 base_url, restaurant_url, True,
@@ -215,7 +209,8 @@ if __name__ == "__main__":
     restaurants_url = list(
         [url, 0] for _, url, visited in restaurants_url if not visited
     )
-    print(f"Total number of new restaurants to {len(restaurants_url)}")
+
+    print(f"Total number of remained restaurants to scrap {len(restaurants_url)}")
 
     print("Getting first round of comments🐅...")
     comments = get_all_comments(restaurants_url[:2])
@@ -227,8 +222,8 @@ if __name__ == "__main__":
         url = page["url"]
         number_of_pages = count // 10
         if number_of_pages:
-            pages_tracker.update({url: [number_of_pages, 0]})
-            for page_number in range(number_of_pages):
+            pages_tracker.update({url: [number_of_pages, 1]})
+            for page_number in range(1, number_of_pages):
                 next_comments_urls.append([url, page_number])
     print("Getting rest of comments🐆...")
     comments += get_all_comments(next_comments_urls[:], pages_tracker)
