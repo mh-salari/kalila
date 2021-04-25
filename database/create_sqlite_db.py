@@ -239,7 +239,7 @@ class DimnaDatabase:
 
 
 if __name__ == "__main__":
-    db_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "dimna.db")
+    db_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "dimna_test.db")
 
     # Config logger
     logger.basicConfig(
@@ -316,7 +316,7 @@ if __name__ == "__main__":
     #         print("is_visited", bool(row[2]))
     #         print("-" * 25)
 
-    # # delete all demo data
+    # delete all demo data
     # with DimnaDatabase(db_path, logger) as db:
     #     db.delete_all_records("Ratings")
     #     db.delete_all_records("LastScrapTime")
