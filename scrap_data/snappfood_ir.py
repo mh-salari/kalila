@@ -213,7 +213,7 @@ if __name__ == "__main__":
     print(f"Total number of remained restaurants to scrap {len(restaurants_url)}")
 
     print("Getting first round of comments🐅...")
-    comments = get_all_comments(restaurants_url[:2])
+    comments = get_all_comments(restaurants_url[:])
 
     next_comments_urls = []
     pages_tracker = {}
