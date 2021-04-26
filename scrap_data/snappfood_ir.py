@@ -47,7 +47,7 @@ def get_restaurants(url):
 def get_all_restaurants_url(urls_to_get):
     restaurants_url = []
     pbar = tqdm(total=len(urls_to_get))
-    with concurrent.futures.ThreadPoolExecutor(max_workers=64) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=126) as executor:
 
         future_to_url = {
             executor.submit(get_restaurants, url): url for url in urls_to_get
@@ -116,27 +116,30 @@ def get_all_comments(restaurants_url, pages_tracker={}, max_workers=64):
                 restaurant_url = futures[future]
                 futures.pop(future)
 
-                if pages_tracker:
-
-                    pages_tracker[restaurant_url][1] += 1
-                    if (
-                        pages_tracker[restaurant_url][1]
-                        >= pages_tracker[restaurant_url][0]
-                    ):
-                        with DimnaDatabase(db_path, logger) as db:
-                            db.update_page_visit_status(
-                                base_url, restaurant_url, True,
-                            )
                 try:
                     comments = future.result()
                 except Exception as exc:
                     tqdm.write(f"{restaurant_url} generated an exception: {exc}")
                 else:
+
+                    if pages_tracker:
+                        pages_tracker[restaurant_url][1] += 1
+                        if (
+                            pages_tracker[restaurant_url][1]
+                            >= pages_tracker[restaurant_url][0]
+                        ):
+                            with DimnaDatabase(db_path, logger) as db:
+                                db.update_page_visit_status(
+                                    base_url, restaurant_url, True,
+                                )
+
                     pages_comments.append(comments)
 
                     with DimnaDatabase(db_path, logger) as db:
                         for comment, rating in comments["comments"]:
-                            db.insert_rating(base_url, comment, rating)
+                            db.insert_rating(
+                                base_url, comment.replace("\x00", ""), rating
+                            )
 
             for restaurant_url, page_number in itertools.islice(
                 restaurants_url_to_do_iterator, len(done)
@@ -209,7 +212,6 @@ if __name__ == "__main__":
     restaurants_url = list(
         [url, 0] for _, url, visited in restaurants_url if not visited
     )
-
     print(f"Total number of remained restaurants to scrap {len(restaurants_url)}")
 
     print("Getting first round of comments🐅...")
@@ -222,9 +224,14 @@ if __name__ == "__main__":
         url = page["url"]
         number_of_pages = count // 10
         if number_of_pages:
-            pages_tracker.update({url: [number_of_pages, 1]})
-            for page_number in range(1, number_of_pages):
+            pages_tracker.update({url: [number_of_pages, 0]})
+            for page_number in range(1, number_of_pages + 1):
                 next_comments_urls.append([url, page_number])
+        else:
+            with DimnaDatabase(db_path, logger) as db:
+                db.update_page_visit_status(
+                    base_url, url, True,
+                )
     print("Getting rest of comments🐆...")
     comments += get_all_comments(next_comments_urls[:], pages_tracker)
 
