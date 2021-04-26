@@ -61,6 +61,9 @@ class DimnaDatabase:
     def execute(self, query):
         self.cursor.execute(query)
 
+    def executemany(self, query, values):
+        self.cursor.executemany(query, values)
+
     def fetchall(self):
         return self.cursor.fetchall()
 
@@ -121,6 +124,26 @@ class DimnaDatabase:
             self.log(
                 "error",
                 f"Failed to insert {{comment='{comment}'}} into {{Ratings}}: {error}",
+            )
+
+    def insert_all_rating(self, site: str, comments):
+        db_insert = []
+        for comment, rating in comments:
+            db_insert.append((site, comment, rating))
+
+        try:
+            insert_query = (
+                "INSERT OR IGNORE INTO Ratings (site, comment, rating) VALUES (?, ?, ?)"
+            )
+            self.executemany(insert_query, db_insert)
+            self.commit()
+            self.log(
+                "info",
+                f"{len(db_insert)} comments inserted successfully into {{Ratings}}",
+            )
+        except sqlite3.Error as error:
+            self.log(
+                "error", f"Failed to insert {{comments}} into {{Ratings}}: {error}",
             )
 
     def ratings(self, site=""):
@@ -192,7 +215,7 @@ class DimnaDatabase:
                 "error", f"Failed to read {{site='{site}'}} from {{Pages}}: {error}"
             )
 
-    def insert_pages_url(self, site, page_url, is_visited):
+    def insert_single_pages_url(self, site, page_url, is_visited):
 
         try:
             insert_query = f"""INSERT INTO Pages (site, page_url, is_visited) VALUES ('{site}', '{page_url}', {is_visited})"""
@@ -207,6 +230,27 @@ class DimnaDatabase:
             self.log(
                 "error",
                 f"Failed to insert {{page_url='{page_url}'}} into {{Pages}}: {error}",
+            )
+
+    def insert_all_pages_url(self, site, pages_url):
+        db_insert = []
+        pages_url = set(pages_url)
+
+        for url in pages_url:
+            db_insert.append((site, url, False))
+
+        try:
+            insert_query = "INSERT OR IGNORE INTO Pages (site, page_url, is_visited) VALUES (?, ?, ?)"
+            self.executemany(insert_query, db_insert)
+            self.commit()
+            self.log(
+                "info",
+                f"Record  {len(db_insert)} pages_urls inserted successfully into Pages",
+            )
+
+        except sqlite3.Error as error:
+            self.log(
+                "error", f"Failed to insert pages_url into {{Pages}}: {error}",
             )
 
     def update_page_visit_status(self, site, page_url, is_visited):
