@@ -102,9 +102,15 @@ class DimnaDatabase:
             except sqlite3.Error as error:
                 self.log("error", f"Failed to create {{{table_name}}}: {error}")
 
-    def delete_all_records(self, table_name):
-        try:
+    def delete_all_records(self, table_name, site=None):
+        if site:
+            sql_create_table_query = (
+                f""" DELETE FROM {table_name} WHERE site='{site}';"""
+            )
+        else:
             sql_create_table_query = f""" DELETE FROM {table_name};"""
+        try:
+
             self.execute(sql_create_table_query)
             self.commit()
             self.log("info", f"All records from {{{table_name}}} deleted!")
@@ -215,7 +221,7 @@ class DimnaDatabase:
                 "error", f"Failed to read {{site='{site}'}} from {{Pages}}: {error}"
             )
 
-    def insert_single_pages_url(self, site, page_url, is_visited):
+    def insert_single_page_url(self, site, page_url, is_visited):
 
         try:
             insert_query = f"""INSERT INTO Pages (site, page_url, is_visited) VALUES ('{site}', '{page_url}', {is_visited})"""
@@ -283,7 +289,7 @@ class DimnaDatabase:
 
 
 if __name__ == "__main__":
-    db_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "dimna_test.db")
+    db_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "dimna.db")
 
     # Config logger
     logger.basicConfig(
@@ -364,4 +370,5 @@ if __name__ == "__main__":
     # with DimnaDatabase(db_path, logger) as db:
     #     db.delete_all_records("Ratings")
     #     db.delete_all_records("LastScrapTime")
-    #     db.delete_all_records("Pages")
+    #     db.delete_all_records("Pages", "maktabkhooneh.org")
+
