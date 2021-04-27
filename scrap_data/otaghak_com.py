@@ -39,7 +39,7 @@ def find_otaghaks_url(site_map):
 
 def scrap_comments(otaghak_url):
     comments = list()
-    url = f"{comments_json_url}(roomId={otaghak_url.split('/')[-1]})?$top=1000&$skip=0"
+    url = f"https://www.otaghak.com/odata/Otaghak/Comments/GetAllByRoomId(roomId={otaghak_url.split('/')[-1]})?$top=1000&$skip=0"
     r = requests.get(url)
     if r.status_code != 200:
         raise Exception(f"Request Error: {r.status_code}")
@@ -98,13 +98,11 @@ def scrap_all_comments(base_url, otaghaks_url, max_workers=128):
 
 if __name__ == "__main__":
 
-    base_url = "https://www.otaghak.com"
+    base_url = "www.otaghak.com"
     site_map_urls = [
         "https://www.otaghak.com/sitemaps/room.xml",
         "https://www.otaghak.com/sitemaps/inactiveroom.xml",
     ]
-    comments_json_url = f"{base_url}/odata/Otaghak/Comments/GetAllByRoomId"
-
     db_path = os.path.join(database_dir_path, "dimna.db",)
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -136,21 +134,20 @@ if __name__ == "__main__":
         SEARCH_FOR_NEW_URLS = True
 
     if SEARCH_FOR_NEW_URLS:
-        print(f"Finding all courses on {base_url}🦦...")
+        print(f"Finding all places on {base_url}🦦...")
         otaghaks_url = []
         for url in tqdm(site_map_urls):
             otaghaks_url += find_otaghaks_url(url)
 
         with DimnaDatabase(db_path, logger) as db:
-            for otaghak_url in tqdm(otaghaks_url):
-                db.insert_pages_url(base_url, otaghak_url, False)
+            db.insert_all_pages_url(base_url, otaghaks_url)
 
         with DimnaDatabase(db_path, logger) as db:
             db.insert_last_scrap_time(base_url, datetime.now())
 
     with DimnaDatabase(db_path, logger) as db:
         otaghaks_url = db.pages_url(base_url)
-    print(f"Total Number of courses: {len(otaghaks_url)}")
+    print(f"Total Number of places: {len(otaghaks_url)}")
 
     print("Scraping all comments🦧...")
     scrap_all_comments(base_url, otaghaks_url)
