@@ -33,12 +33,12 @@ from create_sqlite_db import DimnaDatabase
 
 def find_cities_url(base_url):
     cities_url = list()
-    url = f"{base_url}/inc/nselectCity"
+    url = f"https://{base_url}/inc/nselectCity"
     r = requests.get(url)
     if r.status_code != 200:
         raise Exception(f"Request error: {r.status_code}")
     for city in json.loads(r.text):
-        cities_url.append(f"{base_url}{city['url']}")
+        cities_url.append(f"https://{base_url}{city['url']}")
     return cities_url
 
 
@@ -54,7 +54,7 @@ def find_doctors_url(base_url, city_url):
         else:
             soup = BeautifulSoup(r.text, "html.parser")
             doctors_url += [
-                f"{base_url}{a['href']}"
+                f"https://{base_url}{a['href']}"
                 for a in soup.find_all("a", {"class": "drList"})
             ]
 
@@ -86,10 +86,7 @@ def find_all_doctors_url(base_url, cities_url, max_workers=128):
                     tqdm.write(f"{city_url} generated an exception: {exc}")
                 else:
                     with DimnaDatabase(db_path, logger) as db:
-                        for doctor_url in doctors_url:
-                            db.insert_pages_url(
-                                base_url, doctor_url, False,
-                            )
+                        db.insert_all_pages_url(base_url, doctors_url)
             for city_url in itertools.islice(cities_url_iterator, len(done)):
                 futures_executor = executor.submit(
                     find_doctors_url, base_url=base_url, city_url=city_url
@@ -115,11 +112,12 @@ def scrap_ratings(doctor_url):
 
     for row in section:
         rating = int(re.findall(r'class="red" style="width: (\d+)', str(row))[0]) / 20
-        comment = normalizer(
-            re.findall(r"<\/div> <\/div> <\/div> <\/div>([\s\S]+)<small", str(row))[
-                0
-            ].strip()
-        )
+        comment = re.findall(
+            r"<\/div> <\/div> <\/div> <\/div>([\s\S]+)<small", str(row)
+        )[0]
+
+        comment = re.sub(r"[،؟\?\.\!]+(?=[،؟\?\.\!])", "", normalizer(comment.strip()))
+
         comments.append([comment, rating])
     return comments
 
@@ -157,8 +155,8 @@ def scrap_all_comments(base_url, doctors_url, max_workers=128):
                         db.update_page_visit_status(
                             base_url, doctor_url, True,
                         )
-                        for comment, rate in comments:
-                            db.insert_rating(base_url, comment, rate)
+                        if comments:
+                            db.insert_all_rating(base_url, comments)
             for doctor_url in itertools.islice(doctors_url_to_do_iterator, len(done)):
                 futures_executor = executor.submit(scrap_ratings, doctor_url=doctor_url)
                 futures.update({futures_executor: doctor_url})
@@ -167,13 +165,13 @@ def scrap_all_comments(base_url, doctors_url, max_workers=128):
 
 if __name__ == "__main__":
 
-    base_url = "https://nobat.ir"
+    base_url = "nobat.ir"
 
     db_path = os.path.join(database_dir_path, "dimna.db",)
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
     # Config logger
-    logfile_path = os.path.join(dir_path, "logs", "nobat_ir.log")
+    logfile_path = os.path.join(dir_path, "logs", f"{base_url}.log")
     if not os.path.exists(os.path.dirname(logfile_path)):
         os.mkdir(os.path.dirname(logfile_path))
 
