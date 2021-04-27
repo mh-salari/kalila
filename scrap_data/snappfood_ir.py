@@ -66,26 +66,28 @@ def get_all_restaurants_url(urls_to_get):
 
 
 def get_page_comments(url, page_number):
-
-    restaurant_id = url.replace("https://snappfood.ir/restaurant/menu/", "").split("/")[
-        0
-    ]
-
+    restaurant_id = url.replace("snappfood.ir/restaurant/menu/", "").split("/")[0]
     comments_url = (
         f"https://snappfood.ir/restaurant/comment/vendor/{restaurant_id}/{page_number}"
     )
     r = requests.get(comments_url)
     if r.status_code != 200:
         raise Exception(f"Request Error: {r.status_code}")
-
     comments_json = json.loads(r.text)["data"]
     count = comments_json["count"]
     comments = []
 
     for comment_dict in comments_json["comments"]:
-        comments.append(
-            [normalizer(comment_dict["commentText"].strip()), comment_dict["rate"]]
+        comment = re.sub(
+            r"[،؟\?\.\!]+(?=[،؟\?\.\!])",
+            "",
+            normalizer(comment_dict["commentText"]).strip(),
         )
+
+        rate = comment_dict["rate"] / 2
+        if rate == 0 and comment_dict["feeling"] == "HAPPY":
+            rate = 5
+        comments.append([comment, rate])
 
     page_comments = {"url": url, "count": count, "comments": comments}
     return page_comments
@@ -155,13 +157,13 @@ def get_all_comments(restaurants_url, pages_tracker={}, max_workers=64):
 
 if __name__ == "__main__":
 
-    base_url = "https://snappfood.ir"
+    base_url = "snappfood.ir"
 
     db_path = os.path.join(database_dir_path, "dimna.db",)
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
     # Config logger
-    logfile_path = os.path.join(dir_path, "logs", "snappfood_ir.log")
+    logfile_path = os.path.join(dir_path, "logs", f"{base_url}.log")
     if not os.path.exists(os.path.dirname(logfile_path)):
         os.mkdir(os.path.dirname(logfile_path))
 
@@ -198,8 +200,7 @@ if __name__ == "__main__":
         restaurants_url = get_all_restaurants_url(urls_to_get[:])
 
         with DimnaDatabase(db_path, logger) as db:
-            for restaurant_url in tqdm(restaurants_url):
-                db.insert_pages_url(base_url, restaurant_url, False)
+            db.insert_all_pages_url(base_url, restaurants_url)
 
         print(f"Total number of restaurants: {len(restaurants_url)}")
 
@@ -235,8 +236,3 @@ if __name__ == "__main__":
     print("Getting rest of comments🐆...")
     comments += get_all_comments(next_comments_urls[:], pages_tracker)
 
-    counter = 0
-    for comment in comments:
-        for c in comment:
-            counter += 1
-    print(f"Done! {counter} comments saved 🔥")
