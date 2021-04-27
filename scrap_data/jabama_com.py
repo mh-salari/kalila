@@ -108,7 +108,7 @@ def scrap_comments(page_id):
     return comments
 
 
-def scrap_all_comments(base_url, pages_id, max_workers=5):
+def scrap_all_comments(base_url, pages_id, max_workers=16):
     pages_id_to_do = [
         page_id for (_, page_id, is_visited) in pages_id if not is_visited
     ]
@@ -148,13 +148,13 @@ def scrap_all_comments(base_url, pages_id, max_workers=5):
 
 if __name__ == "__main__":
 
-    base_url = "https://www.jabama.com/"
+    base_url = "jabama.com"
 
     db_path = os.path.join(database_dir_path, "dimna.db",)
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
     # Config logger
-    logfile_path = os.path.join(dir_path, "logs", "jabama_com.log")
+    logfile_path = os.path.join(dir_path, "logs", f"{base_url}.log")
     if not os.path.exists(os.path.dirname(logfile_path)):
         os.mkdir(os.path.dirname(logfile_path))
 
@@ -193,7 +193,7 @@ if __name__ == "__main__":
 
     with DimnaDatabase(db_path, logger) as db:
         pages_id = db.pages_url(base_url)
-    print(f"Total Number of apps: {len(pages_id)}")
+    print(f"Total Number of places: {len(pages_id)}")
 
     print("Scraping all comments🦧...")
     scrap_all_comments(base_url, pages_id[:])
