@@ -41,7 +41,7 @@ def find_offers(url):
     soup = BeautifulSoup(r.content, "html.parser")
 
     offers = [
-        base_url + offer.a["href"]
+        "https://" + base_url + offer.a["href"]
         for offer in soup.find_all("div", {"class": "cat-deal-box-main clearfix"})
     ]
     return offers
@@ -55,7 +55,7 @@ def find_all_offers():
     urls = list()
     for city in cities:
         for category in categories:
-            urls.append(f"{base_url}/{city}/{category}")
+            urls.append(f"https://{base_url}/{city}/{category}")
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=32) as executor:
         future_to_url = {}
@@ -76,7 +76,7 @@ def find_all_offers():
                 with DimnaDatabase(db_path, logger) as db:
                     for page in offers:
                         if page not in old_offers:
-                            db.insert_pages_url(base_url, page, False)
+                            db.insert_single_page_url(base_url, page, False)
 
     with DimnaDatabase(db_path, logger) as db:
         db.insert_last_scrap_time(base_url, datetime.now())
@@ -114,7 +114,9 @@ def scrap_rattings(url):
             return ratings
         with lock:
             visited_ratings_url.append(_url)
-        ratings_url = base_url + "/rating/ratings/getMoreRatings/" + _url[:-1]
+        ratings_url = (
+            "https://" + base_url + "/rating/ratings/getMoreRatings/" + _url[:-1]
+        )
         page_num = 0
         while True:
             page_num += 1
@@ -173,13 +175,13 @@ def scrap_all_rattings(pages_url):
 
 if __name__ == "__main__":
 
-    base_url = "https://netbarg.com"
+    base_url = "netbarg.com"
     db_path = os.path.join(database_dir_path, "dimna.db",)
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
     # Config logger
-    logfile_path = os.path.join(dir_path, "logs", "netbard_com.log")
+    logfile_path = os.path.join(dir_path, "logs", f"{base_url}.log")
     if not os.path.exists(os.path.dirname(logfile_path)):
         os.mkdir(os.path.dirname(logfile_path))
 
