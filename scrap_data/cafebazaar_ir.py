@@ -143,13 +143,13 @@ def scrap_all_comments(base_url, urls, max_workers=256):
 
 if __name__ == "__main__":
 
-    base_url = "https://cafebazaar.ir"
+    base_url = "cafebazaar.ir"
 
     db_path = os.path.join(database_dir_path, "dimna.db",)
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
     # Config logger
-    logfile_path = os.path.join(dir_path, "logs", "cafebazaar_ir.log")
+    logfile_path = os.path.join(dir_path, "logs", f"{base_url}.log")
     if not os.path.exists(os.path.dirname(logfile_path)):
         os.mkdir(os.path.dirname(logfile_path))
 
