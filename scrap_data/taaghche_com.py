@@ -150,7 +150,7 @@ def scrap_all_comments(comments_url, max_workers=128):
                 book_url = futures[future]
                 futures.pop(future)
                 try:
-                    ratings = future.result()
+                    comments = future.result()
                 except Exception as exc:
                     tqdm.write(f"{book_url} generated an exception: {exc}")
                 else:
@@ -158,8 +158,7 @@ def scrap_all_comments(comments_url, max_workers=128):
                         db.update_page_visit_status(
                             base_url, book_url, True,
                         )
-                        for comment, rate in ratings:
-                            db.insert_rating(base_url, comment, rate)
+                        db.insert_all_rating(base_url, comments)
             for book_url, comment_url in itertools.islice(
                 comments_url_iterator, len(done)
             ):
@@ -172,7 +171,7 @@ def scrap_all_comments(comments_url, max_workers=128):
 
 if __name__ == "__main__":
 
-    base_url = "https://taaghche.com"
+    base_url = "taaghche.com"
     site_map_url = "https://taaghche.com/sitemap.xml"
     comments_base_url = (
         "https://taaghche.com/_next/data/bg-Dtu7JQNQAYTekmO2fK/book-review"
@@ -183,7 +182,7 @@ if __name__ == "__main__":
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
     # Config logger
-    logfile_path = os.path.join(dir_path, "logs", "taaghche_com.log")
+    logfile_path = os.path.join(dir_path, "logs", f"{base_url}.log")
     if not os.path.exists(os.path.dirname(logfile_path)):
         os.mkdir(os.path.dirname(logfile_path))
 
@@ -215,8 +214,7 @@ if __name__ == "__main__":
         books_url = find_books_url(books_xml_url)
 
         with DimnaDatabase(db_path, logger) as db:
-            for page in tqdm(books_url):
-                db.insert_pages_url(base_url, page, False)
+            db.insert_all_pages_url(base_url, books_url)
 
         with DimnaDatabase(db_path, logger) as db:
             db.insert_last_scrap_time(base_url, datetime.now())
