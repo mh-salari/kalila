@@ -98,7 +98,7 @@ def scrap_all_comments(base_url, otaghaks_url, max_workers=128):
 
 if __name__ == "__main__":
 
-    base_url = "www.otaghak.com"
+    base_url = "otaghak.com"
     site_map_urls = [
         "https://www.otaghak.com/sitemaps/room.xml",
         "https://www.otaghak.com/sitemaps/inactiveroom.xml",
@@ -107,7 +107,7 @@ if __name__ == "__main__":
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
     # Config logger
-    logfile_path = os.path.join(dir_path, "logs", "otaghak_com.log")
+    logfile_path = os.path.join(dir_path, "logs", f"{base_url}.log")
     if not os.path.exists(os.path.dirname(logfile_path)):
         os.mkdir(os.path.dirname(logfile_path))
 
