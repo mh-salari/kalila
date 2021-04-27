@@ -91,7 +91,12 @@ def scrap_comments(url):
                         comment += "\n" + " نقاط ضعف: " + pn_comment[1].text.strip()
                 except:
                     pass
-            comments.append([comment.strip(), rating])
+
+            comment = re.sub(
+                r"[،؟\?\.\!]+(?=[،؟\?\.\!])", "", normalizer(comment).strip(),
+            )
+
+            comments.append([comment, rating])
     except:
         pass
     return comments
@@ -136,13 +141,13 @@ def scrap_all_comments(base_url, urls, max_workers=256):
 
 if __name__ == "__main__":
 
-    base_url = "https://www.snapptrip.com"
+    base_url = "snapptrip.com"
 
     db_path = os.path.join(database_dir_path, "dimna.db",)
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
     # Config logger
-    logfile_path = os.path.join(dir_path, "logs", "snapptrip_com.log")
+    logfile_path = os.path.join(dir_path, "logs", f"{base_url}.log")
     if not os.path.exists(os.path.dirname(logfile_path)):
         os.mkdir(os.path.dirname(logfile_path))
 
@@ -168,7 +173,7 @@ if __name__ == "__main__":
     else:
         SEARCH_FOR_NEW_URLS = True
     if SEARCH_FOR_NEW_URLS:
-        print(f"Finding all apps on {base_url}🦦...")
+        print(f"Finding all places on {base_url}🦦...")
         hotels_url = find_all_hotels_url()
         print(hotels_url[0])
         print(f"Saving urls of {base_url} to the database🦦...")
