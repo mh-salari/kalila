@@ -222,10 +222,10 @@ if __name__ == "__main__":
     else:
         SEARCH_FOR_NEW_URLS = True
     if SEARCH_FOR_NEW_URLS:
-        print(f"Finding all places on {base_url}🦦...")
+        print(f"Finding all products on {base_url}🦦...")
         all_products_url = get_all_products_url(base_sitemap_url)
 
-        print(f"Saving urls of {base_url} to the database🦦...")
+        print(f"Saving urls of {base_url} products to the database🦦...")
         with DimnaDatabase(db_path, logger) as db:
             db.insert_all_pages_url(base_url, all_products_url)
 
@@ -235,7 +235,7 @@ if __name__ == "__main__":
 
     with DimnaDatabase(db_path, logger) as db:
         all_products_url = db.pages_url(base_url)
-    print(f"Total Number of apps: {len(all_products_url)}")
+    print(f"Total Number of product: {len(all_products_url)}")
 
     print("Scraping all comments🦧...")
     scrap_all_comments(base_url, all_products_url[:])
