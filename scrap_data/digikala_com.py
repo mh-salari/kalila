@@ -83,7 +83,10 @@ def scrap_comments(url):
         url = f"https://www.digikala.com/ajax/product/comments/list/{product_id}/?page={page_number}"
         r = requests.get(url)
         if r.status_code != 200:
-            raise Exception(f"Request Error: {r.status_code}")
+            if r.status_code == 429:
+                return comments
+            else:
+                raise Exception(f"Request Error: {r.status_code}")
 
         soup = BeautifulSoup(r.text, "html.parser")
 
@@ -142,7 +145,7 @@ def scrap_comments(url):
     return comments
 
 
-def scrap_all_comments(base_url, all_products_url, max_workers=64):
+def scrap_all_comments(base_url, all_products_url, max_workers=128):
     products_url_to_do = [
         product_url
         for (_, product_url, is_visited) in all_products_url
@@ -180,9 +183,7 @@ def scrap_all_comments(base_url, all_products_url, max_workers=64):
                         if comments:
                             db.insert_all_rating(base_url, comments)
             for product_url in itertools.islice(products_url_to_do_iterator, len(done)):
-                futures_executor = executor.submit(
-                    scrap_comments, product_url=product_url
-                )
+                futures_executor = executor.submit(scrap_comments, url=product_url)
                 futures.update({futures_executor: product_url})
     pbar.close()
 
