@@ -83,14 +83,14 @@ def scrap_comments(course_url):
 
 if __name__ == "__main__":
 
-    base_url = "https://maktabkhooneh.org"
+    base_url = "maktabkhooneh.org"
     site_map_url = "https://maktabkhooneh.org/course.xml"
 
     db_path = os.path.join(database_dir_path, "dimna.db",)
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
     # Config logger
-    logfile_path = os.path.join(dir_path, "logs", "maktabkhooneh_org.log")
+    logfile_path = os.path.join(dir_path, "logs", f"{base_url}.log")
     if not os.path.exists(os.path.dirname(logfile_path)):
         os.mkdir(os.path.dirname(logfile_path))
 
@@ -115,14 +115,12 @@ if __name__ == "__main__":
             print(f"Loading {base_url} pages from db🦁")
     else:
         SEARCH_FOR_NEW_URLS = True
-
     if SEARCH_FOR_NEW_URLS:
         print(f"Finding all courses on {base_url}🦦...")
         courses_url = find_courses_url(site_map_url)
-
+        print(len(courses_url))
         with DimnaDatabase(db_path, logger) as db:
-            for course_url in tqdm(courses_url):
-                db.insert_pages_url(base_url, course_url, False)
+            db.insert_all_pages_url(base_url, courses_url)
 
         with DimnaDatabase(db_path, logger) as db:
             db.insert_last_scrap_time(base_url, datetime.now())
@@ -139,5 +137,5 @@ if __name__ == "__main__":
                     base_url, course_url, True,
                 )
 
-                for comment, rate in scrap_comments(course_url):
-                    db.insert_rating(base_url, comment, rate)
+                comments = scrap_comments(course_url)
+                db.insert_all_rating(base_url, comments)
