@@ -83,7 +83,7 @@ def scrap_comments(url):
         url = f"https://www.digikala.com/ajax/product/comments/list/{product_id}/?page={page_number}"
         r = requests.get(url)
         if r.status_code != 200:
-            if r.status_code == 429:
+            if r.status_code == 429 or r.status_code == 404:
                 return comments
             else:
                 raise Exception(f"Request Error: {r.status_code}")
